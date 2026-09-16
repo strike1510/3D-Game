@@ -3,7 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class BezierCurve : MonoBehaviour
 {
-    public Transform[] points;          // 3 = quadratique, 4 = cubique
+    public Transform[] points;          // n points de contrôle (n >= 2)
     [Range(2, 100)] public int resolution = 50;
 
     LineRenderer lr;
@@ -12,7 +12,7 @@ public class BezierCurve : MonoBehaviour
 
     void Update()
     {
-        if (points == null || points.Length < 3) { lr.positionCount = 0; return; }
+        if (points == null || points.Length < 2) { lr.positionCount = 0; return; }
 
         lr.positionCount = resolution + 1;
         for (int i = 0; i <= resolution; i++)
@@ -22,30 +22,27 @@ public class BezierCurve : MonoBehaviour
         }
     }
 
-    // Point de la courbe pour t entre 0 et 1
+    // Point de la courbe pour t entre 0 et 1, quel que soit le nombre de points
     public Vector3 Evaluer(float t)
     {
-        if (points.Length == 3)
-            return Quadratique(points[0].position, points[1].position, points[2].position, t);
-        else
-            return Cubique(points[0].position, points[1].position, points[2].position, points[3].position, t);
+        Vector3[] p = new Vector3[points.Length];
+        for (int i = 0; i < points.Length; i++)
+            p[i] = points[i].position;
+        return DeCasteljau(p, t);
     }
 
-    Vector3 Quadratique(Vector3 p0, Vector3 p1, Vector3 p2, float t)
+    // Algorithme récursif de De Casteljau :
+    // réduit n points en n-1 par interpolation, jusqu'à 1 seul point
+    Vector3 DeCasteljau(Vector3[] p, float t)
     {
-        float u = 1f - t;
-        return u * u * p0
-             + 2f * u * t * p1
-             + t * t * p2;
-    }
+        if (p.Length == 1)
+            return p[0];
 
-    Vector3 Cubique(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
-    {
-        float u = 1f - t;
-        return u * u * u * p0
-             + 3f * u * u * t * p1
-             + 3f * u * t * t * p2
-             + t * t * t * p3;
+        Vector3[] suivant = new Vector3[p.Length - 1];
+        for (int i = 0; i < suivant.Length; i++)
+            suivant[i] = Vector3.Lerp(p[i], p[i + 1], t);
+
+        return DeCasteljau(suivant, t);
     }
 
     // Affiche les points et les lignes de contrôle dans la scène
